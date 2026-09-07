@@ -1,0 +1,25 @@
+{
+  "schema": "classroom50/classroom/v1",
+  "name": "Final Project",
+  "short_name": "final-project",
+  "term": "",
+  "org": "L2D-Summer2025-ML",
+  "team": {
+    "id": 19379984,
+    "slug": "classroom50-final-project"
+  },
+  "teams": {
+    "teacher": {
+      "id": 19379986,
+      "slug": "classroom50-final-project-teacher"
+    },
+    "hta": {
+      "id": 19379988,
+      "slug": "classroom50-final-project-hta"
+    },
+    "ta": {
+      "id": 19379989,
+      "slug": "classroom50-final-project-ta"
+    }
+  }
+}
