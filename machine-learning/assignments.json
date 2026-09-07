@@ -51,7 +51,11 @@
       },
       "mode": "individual",
       "autograder": "submit-on-message",
-      "feedback_pr": true
+      "feedback_pr": true,
+      "grading": {
+        "mode": "manual",
+        "max_points": 100
+      }
     }
   ]
 }
