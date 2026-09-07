@@ -1,0 +1,210 @@
+# relIQ custom submission caller — commit-message triggered.
+#
+# Written VERBATIM into each student repo at `gh student accept` time, so
+# every ORG / branch reference below must be a real value: the {{ORG}} /
+# {{BRANCH}} / {{CONFIG_BRANCH}} placeholders the built-in Classroom 50 shim
+# uses are NOT expanded for custom callers like this one. The $UPPER_CASE
+# placeholders in THIS file are relIQ's own -- they are substituted by
+# python_scripts/shim_publisher.py (render_shim()) BEFORE this file is ever
+# committed. Once it lands at <org>/classroom50/<classroom>/autograders/
+# <name>.yaml it is a plain, static workflow file forever: `gh teacher
+# assignment submission-mode` explicitly refuses to rewrite a custom caller,
+# so trigger changes are ours to make and to retrofit (see
+# docs/classroom50_design_record.md closing note).
+#
+# Students push freely as they work. A push is only treated as a SUBMISSION
+# when the commit message contains the trigger phrase. The phrase itself
+# lives as a single exported constant, TRIGGER_PHRASE in
+# python_scripts/shim_publisher.py -- the shared source of truth for this
+# shim, the lesson ReadMe (T8) and the tutor guide (T12). Those three must
+# never disagree; see that module's docstring before ever editing the phrase.
+#
+# Jobs skipped by `if:` never allocate a runner, so ordinary work-in-progress
+# pushes cost no Actions minutes -- this guard IS the entire cost case for
+# D5 (docs/classroom50_design_record.md §6: ~7% of the 3,000 min/month allowance
+# with the guard, vs ~35% without it). Confirmed live in the T0.2 pilot: a
+# guard-skipped run reports `billable: {}` -- no billing record at all.
+#
+# On a match, control passes to the stock Classroom 50 runner, which mints
+# the submit/<UTC-timestamp>-<short-sha> tag, publishes the Release, posts
+# the commit status and maintains the Feedback PR -- all of that machinery is
+# unchanged. We are only changing WHEN it fires.
+#
+# NOTE on casing: the match MUST stay inside the expression. Doing the
+# comparison in a shell step would allocate a runner on every push and
+# destroy the entire cost saving above. That is fine, because `contains()`
+# is documented as case-insensitive, so the single lowercase clause below
+# matches whatever casing a student types. It is also a substring test, so
+# trailing punctuation ("assignment completed!", "assignment completed.")
+# already matches without any extra handling.
+#
+# This guard used to carry four `contains()` clauses, one per casing variant,
+# written on the belief that expressions had no case-insensitive comparison.
+# They were redundant, not wrong. Do not reintroduce them: a submission that
+# fails to register is almost never a casing problem -- check `submission_mode`
+# below, and that the student actually pushed to a branch the guard watches.
+#
+# ⚠️ CRITICAL, learned the hard way in the T0.2 pilot (see
+# docs/classroom50_design_record.md §7 "Design error caught"): the assignment's
+# `submission_mode` MUST be "every-push" or simply absent -- NEVER "tag".
+# The stock runner suppresses branch-triggered runs whenever
+# `submission_mode == "tag"`:
+#
+#     is_branch_run = not REF.startswith("refs/tags/")
+#     branch_push_suppressed = submission_mode == "tag" and is_branch_run
+#
+# With `tag` mode, THIS caller still fires correctly on the branch push, and
+# the stock runner then silently declines to grade -- no tag, no Release, no
+# error message anywhere. `submission_mode` is set on the assignment itself
+# (T5's `assignment add --submission-mode`), not by this file, but the
+# symptom of getting it wrong ("student says they submitted, nothing on the
+# submissions page") shows up here, so it is flagged here too.
+#
+# Rendered for: org=L2D-Summer2025-ML classroom=final-project shim_name=submit-on-message
+
+name: Submit
+
+on:
+  push:
+    branches: ["main"]
+    tags: ["submit/*"]
+
+jobs:
+  grade:
+    if: >-
+      startsWith(github.ref, 'refs/tags/submit/') ||
+      contains(github.event.head_commit.message, 'assignment completed')
+    uses: "L2D-Summer2025-ML/classroom50/.github/workflows/autograde-runner.yaml@main"
+    permissions:
+      contents: write
+      statuses: write
+      pull-requests: write
+
+  # --- D8 (tutor alerting): flag the student's Feedback PR ----------------
+  #
+  # D8 is settled (docs/classroom50_design_record.md §3, docs/classroom50_design_record.md
+  # §2): on a successful submission, flag the student's Feedback PR rather
+  # than running a central relIQ digest. Rejected: a central digest (delayed,
+  # needs a destination) and doing both. Rationale for the PR flag: it lands
+  # immediately, in the one place tutors already mark (D9/T12), and it needs
+  # nothing beyond the automatically-provided GITHUB_TOKEN -- no secret is
+  # ever added to a student repo for this.
+  #
+  # Kept behind the `CLASSROOM50_D8_NOTIFY` variable gate even though D8 is
+  # decided: this file is written verbatim into every student repo at accept
+  # and `gh teacher assignment submission-mode` refuses to touch it
+  # afterwards, so the gate stays as T5.1's low-risk activation switch --
+  # setting an Actions *variable* at org level turns notification on for
+  # every already-committed student repo at once, no shim republish needed.
+  # Flip it on deliberately (`gh variable set CLASSROOM50_D8_NOTIFY --body
+  # enabled --org <org>`, or per-repo), not by deleting this `if:`.
+  #
+  # How the Feedback PR is found: by branch, not by title. The Feedback PR is
+  # opened once at accept time and reused for every submission (see
+  # classroom50_teacher_guide.md §"Feedback PR"); its title can be renamed by
+  # a student and duplicated across repos, but its head/base branches cannot
+  # -- head is this repo's own `main` (the branch that just
+  # pushed) and base is the frozen `feedback` branch upstream creates at
+  # accept (see docs/classroom50_design_record.md repair-workflow note on
+  # a pre-created `feedback` branch blocking accept). That pairing is unique
+  # per repo, so `gh pr list --base feedback --head main` is a
+  # reliable lookup where a title search would not be.
+  #
+  # Never fails the submission: `grade` already ran and its result is
+  # recorded before this job even starts (`needs: grade`), so nothing here
+  # can undo the submission record. Belt and braces on top of that: the job
+  # itself carries `continue-on-error: true` so a failure here is reported as
+  # neutral rather than turning the whole run red, permissions are granted
+  # only at this job (not widened workflow-wide), and every gh call below is
+  # individually guarded so one missing capability (e.g. a token that can't
+  # label) degrades to a warning instead of aborting the rest of the script.
+  notify:
+    needs: grade
+    if: needs.grade.result == 'success' && vars.CLASSROOM50_D8_NOTIFY == 'enabled'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    permissions:
+      contents: read
+      pull-requests: write
+      # Labelling a PR goes through the Issues API even though the target is
+      # a pull request -- `pull-requests: write` alone does not cover it, so
+      # this is granted here, scoped to just this job, alongside it.
+      issues: write
+    steps:
+      - name: Flag the Feedback PR for tutor marking
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set +e  # never let a lookup/comment/label failure fail this step
+
+          HEAD_BRANCH="main"
+          BASE_BRANCH="feedback"
+          LABEL="ready-to-mark"
+
+          echo "::group::Locate the Feedback PR (base=$BASE_BRANCH, head=$HEAD_BRANCH)"
+          PR_NUMBER="$(gh pr list --repo "$REPO" --base "$BASE_BRANCH" --head "$HEAD_BRANCH" \
+            --state all --json number,updatedAt \
+            --jq 'sort_by(.updatedAt) | last | .number // empty' 2>/dev/null)"
+          echo "::endgroup::"
+
+          if [ -z "$PR_NUMBER" ]; then
+            echo "::warning::D8 notify: no Feedback PR found (base=$BASE_BRANCH, head=$HEAD_BRANCH) in $REPO for $SHA -- skipping the tutor alert. The submission record itself is unaffected."
+            exit 0
+          fi
+          echo "Found Feedback PR #$PR_NUMBER"
+
+          # The stock runner mints submit/<UTC-timestamp>-<short-sha> and a
+          # matching Release for this commit. Look the tag up by the commit
+          # it points at (paginated -- a long-lived repo can have many) so
+          # this job never has to reproduce the runner's exact timestamp.
+          TAG_NAME="$(gh api "repos/$REPO/tags" --paginate \
+            --jq '[.[] | select(.name | startswith("submit/")) | select(.commit.sha == "'"$SHA"'")] | first(.[]) | .name // empty' 2>/dev/null)"
+
+          RELEASE_URL=""
+          if [ -n "$TAG_NAME" ]; then
+            RELEASE_URL="$(gh release view "$TAG_NAME" --repo "$REPO" --json url --jq '.url // empty' 2>/dev/null)"
+          fi
+
+          SHORT_SHA="${SHA:0:7}"
+          COMMIT_URL="$GITHUB_SERVER_URL/$REPO/commit/$SHA"
+
+          BODY="### 📥 New submission ready to mark
+
+          A submission just landed on \`$HEAD_BRANCH\` at [\`$SHORT_SHA\`]($COMMIT_URL)."
+
+          if [ -n "$TAG_NAME" ]; then
+            BODY="$BODY
+          - **Submission tag**: \`$TAG_NAME\`"
+          fi
+
+          if [ -n "$RELEASE_URL" ]; then
+            BODY="$BODY
+          - **Release**: $RELEASE_URL"
+          else
+            BODY="$BODY
+          - **Release**: not found yet (it may still be publishing) -- check the [Actions run]($RUN_URL) or this repo's Releases page."
+          fi
+
+          BODY="$BODY
+
+          The diff on this PR is the student's full starter→latest work (base is frozen at accept), so it's ready to mark inline here."
+
+          if ! gh pr comment "$PR_NUMBER" --repo "$REPO" --body "$BODY" 2>/dev/null; then
+            echo "::warning::D8 notify: failed to comment on Feedback PR #$PR_NUMBER in $REPO -- the submission was still recorded, only the tutor alert is missing."
+          fi
+
+          if ! gh label list --repo "$REPO" --json name --jq '.[].name' 2>/dev/null | grep -qx "$LABEL"; then
+            if ! gh label create "$LABEL" --repo "$REPO" --color "0E8A16" \
+              --description "A submission is ready for a tutor to mark" 2>/dev/null; then
+              echo "::warning::D8 notify: could not create the '$LABEL' label in $REPO -- skipping labelling; the marking comment above still stands."
+            fi
+          fi
+
+          if ! gh pr edit "$PR_NUMBER" --repo "$REPO" --add-label "$LABEL" 2>/dev/null; then
+            echo "::warning::D8 notify: could not apply the '$LABEL' label to PR #$PR_NUMBER in $REPO -- the marking comment was still posted."
+          fi
+
+          exit 0
