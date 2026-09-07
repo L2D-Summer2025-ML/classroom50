@@ -1,4 +1,29 @@
 {
   "schema": "classroom50/assignments/v1",
-  "assignments": []
+  "assignments": [
+    {
+      "slug": "01",
+      "name": "Machine Learning (ML1)",
+      "template": {
+        "owner": "L2D-Summer2025-ML",
+        "repo": "ML1_Assignment_Template",
+        "branch": "main"
+      },
+      "due": "2025-06-13T22:59:00Z",
+      "due_meta": {
+        "input": "2025-06-13T23:59:00+01:00",
+        "offset": "+01:00",
+        "source": "explicit-offset"
+      },
+      "available_from": "2025-06-01T23:00:00Z",
+      "available_from_meta": {
+        "input": "2025-06-02T00:00:00+01:00",
+        "offset": "+01:00",
+        "source": "explicit-offset"
+      },
+      "mode": "individual",
+      "autograder": "submit-on-message",
+      "feedback_pr": true
+    }
+  ]
 }
