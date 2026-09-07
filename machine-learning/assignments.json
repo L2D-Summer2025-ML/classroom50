@@ -28,6 +28,30 @@
         "mode": "manual",
         "max_points": 100
       }
+    },
+    {
+      "slug": "02",
+      "name": "Machine Learning (ML2)",
+      "template": {
+        "owner": "L2D-Summer2025-ML",
+        "repo": "ML2_Assignment_Template",
+        "branch": "main"
+      },
+      "due": "2025-06-27T22:59:00Z",
+      "due_meta": {
+        "input": "2025-06-27T23:59:00+01:00",
+        "offset": "+01:00",
+        "source": "explicit-offset"
+      },
+      "available_from": "2025-06-15T23:00:00Z",
+      "available_from_meta": {
+        "input": "2025-06-16T00:00:00+01:00",
+        "offset": "+01:00",
+        "source": "explicit-offset"
+      },
+      "mode": "individual",
+      "autograder": "submit-on-message",
+      "feedback_pr": true
     }
   ]
 }
