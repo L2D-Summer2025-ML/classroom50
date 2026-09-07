@@ -1,0 +1,25 @@
+{
+  "schema": "classroom50/classroom/v1",
+  "name": "Machine Learning",
+  "short_name": "machine-learning",
+  "term": "",
+  "org": "L2D-Summer2025-ML",
+  "team": {
+    "id": 19379947,
+    "slug": "classroom50-machine-learning"
+  },
+  "teams": {
+    "teacher": {
+      "id": 19379948,
+      "slug": "classroom50-machine-learning-teacher"
+    },
+    "hta": {
+      "id": 19379949,
+      "slug": "classroom50-machine-learning-hta"
+    },
+    "ta": {
+      "id": 19379950,
+      "slug": "classroom50-machine-learning-ta"
+    }
+  }
+}
