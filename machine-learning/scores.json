@@ -1,4 +1,35 @@
 {
   "schema": "classroom50/scores/v1",
-  "assignments": {}
+  "assignments": {
+    "01": {
+      "type": "individual",
+      "entries": [],
+      "collected_at": "2026-09-08T04:29:31Z"
+    },
+    "02": {
+      "type": "individual",
+      "entries": [],
+      "collected_at": "2026-09-08T04:29:31Z"
+    },
+    "03": {
+      "type": "individual",
+      "entries": [],
+      "collected_at": "2026-09-08T04:29:31Z"
+    },
+    "04": {
+      "type": "individual",
+      "entries": [],
+      "collected_at": "2026-09-08T04:29:31Z"
+    },
+    "05": {
+      "type": "individual",
+      "entries": [],
+      "collected_at": "2026-09-08T04:29:31Z"
+    },
+    "06": {
+      "type": "individual",
+      "entries": [],
+      "collected_at": "2026-09-08T04:29:31Z"
+    }
+  }
 }
